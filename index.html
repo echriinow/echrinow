@@ -1,0 +1,1509 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ECHRI NOW - متجر إلكتروني</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 
+    استخدام خط "Cairo" للموقع
+    https://fonts.google.com/specimen/Cairo
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      /* (لإخفاء شريط التمرير أثناء طيران الأنيميشن) */
+      overflow-x: hidden; 
+    }
+    .hidden {
+      display: none;
+    }
+    
+    /* --- (أنيميشن السلايدر - تم التحديث) --- */
+    .slider-container {
+      position: relative;
+    }
+    .slider-item {
+      display: none;
+      animation: fadeIn 0.8s ease-in-out;
+      overflow: hidden; /* (لإخفاء تأثير الزوم الزائد) */
+    }
+    .slider-item.active {
+      display: block;
+    }
+    
+    /* (أنيميشن زووم للصورة) */
+    .slider-item.active img.slider-bg-image {
+      /* (تأثير كين بيرنز: زووم بطيء) */
+      animation: kenBurns 10s ease-out forwards;
+      /* (إصلاح الاهتزاز على الهاتف) */
+      will-change: transform;
+      transform: translateZ(0);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0.7; }
+      to { opacity: 1; }
+    }
+    
+    /* (أنيميشن "كين بيرنز" لزوم الصورة) */
+    @keyframes kenBurns {
+      from {
+        transform: scale(1) translateZ(0);
+        opacity: 1;
+      }
+      to {
+        transform: scale(1.1) translateZ(0);
+        opacity: 1;
+      }
+    }
+    
+    /* (أنيميشن "صعود النص" في السلايدر) */
+    .slider-item.active .slide-content {
+      animation: slideUp 1s ease-out 0.5s forwards;
+      opacity: 0;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    /* (تدرج لوني للنص في السلايدر) */
+    .slide-content::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 70%;
+      background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+      z-index: 1;
+      border-radius: 0 0 1rem 1rem;
+    }
+    .slide-content > * {
+      position: relative;
+      z-index: 2;
+    }
+    
+    /* (ظل للنص في السلايدر) */
+    .text-shadow {
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+    }
+
+    /* --- (أنيميشن بطاقات المنتجات - الظهور عند التمرير) --- */
+    .product-card {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+    .product-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    /* (أنيميشن الهوف) */
+    .product-card-hover {
+      transition: all 0.3s ease-in-out;
+    }
+    .product-card-hover:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* --- (هياكل التحميل - Skeleton Loaders) --- */
+    .skeleton-card {
+      background-color: #f3f4f6;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    .skeleton-img {
+      background-color: #e5e7eb;
+      /* (يجب أن يطابق ارتفاع الصورة) */
+      /* (استخدم aspect-square بدلاً من height) */
+      width: 100%;
+      aspect-ratio: 1 / 1; 
+    }
+    .skeleton-text {
+      background-color: #e5e7eb;
+      height: 1.25rem;
+      border-radius: 0.25rem;
+    }
+    
+    /* --- (أنيميشن طيران السلة - Fly-to-Cart) --- */
+    #fly-to-cart-img {
+      position: fixed;
+      opacity: 0;
+      transition: all 0.5s ease-in-out;
+      z-index: 200;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    /* --- (أنيميشن الأيقونات) --- */
+    .icon-hover-scale {
+      transition: transform 0.3s ease;
+    }
+    .icon-hover-scale:hover {
+      transform: scale(1.25);
+    }
+    
+    /* (تنسيق معرض الصور في صفحة المنتج) */
+    .thumbnail-img {
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.3s ease;
+    }
+    .thumbnail-img.active {
+        border-color: #F97316; /* (برتقالي) */
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+
+  <!-- (الإشعارات) -->
+  <div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[200] w-full max-w-md">
+    <!-- الإشعارات ستضاف هنا -->
+  </div>
+
+  <!-- (صورة أنيميشن الطيران للسلة) -->
+  <img id="fly-to-cart-img" src="" alt="flying product" />
+
+  <!-- 1. الشريط العلوي (Header) -->
+  <header class="bg-white shadow-md sticky top-0 z-50">
+    <div id="header-container" class="container mx-auto p-4 max-w-7xl flex flex-wrap justify-between items-center gap-y-4">
+      <!-- سيتم ملء المحتوى هنا بواسطة الجافاسكريبت -->
+    </div>
+  </header>
+
+  <!-- 2. المحتوى الرئيسي -->
+  <main class="container mx-auto p-4 max-w-7xl">
+    
+    <!-- (شاشة التحميل الرئيسية) -->
+    <div id="main-loader" class="text-center p-20">
+      <div class="w-16 h-16 border-4 border-orange-500 border-dashed rounded-full animate-spin mx-auto"></div>
+      <p class="mt-4 text-lg text-gray-600">جاري تحميل المتجر...</p>
+    </div>
+
+    <!-- (محتوى الموقع بعد التحميل) -->
+    <div id="app-content" class="hidden">
+      <!-- (محتوى الصفحات سيعرض هنا) -->
+      <!-- (صفحة قائمة المنتجات) -->
+      <div id="page-list">
+        <!-- (السلايدر / اللافتة الترحيبية) -->
+        <div id="slider-container" class="slider-container w-full aspect-square md:h-96 md:aspect-auto bg-gray-900 text-white rounded-xl overflow-hidden shadow-lg mb-10">
+          <!-- (هياكل التحميل أو الشرائح ستضاف هنا) -->
+        </div>
+        <!-- (أزرار الفئات) -->
+        <div id="categories-container" class="flex justify-center gap-2 mb-8 flex-wrap">
+          <!-- (هياكل التحميل أو الأزرار ستضاف هنا) -->
+        </div>
+        <!-- (قائمة المنتجات - تم تعديل الفراغ gap) -->
+        <div id="product-list-container" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <!-- (هياكل التحميل أو المنتجات ستضاف هنا) -->
+        </div>
+      </div>
+      
+      <!-- (صفحة تفاصيل المنتج) -->
+      <div id="page-detail" class="hidden">
+        <!-- سيتم ملء المحتوى هنا -->
+      </div>
+      
+      <!-- (صفحة سلة المشتريات) -->
+      <div id="page-cart" class="hidden">
+        <!-- سيتم ملء المحتوى هنا -->
+      </div>
+      
+      <!-- (صفحة الدفع) -->
+      <div id="page-checkout" class="hidden">
+        <!-- سيتم ملء المحتوى هنا -->
+      </div>
+      
+      <!-- (صفحة تسجيل الدخول) -->
+      <div id="page-login" class="hidden">
+        <!-- سيتم ملء المحتوى هنا -->
+      </div>
+
+      <!-- (صفحة إنشاء حساب) -->
+      <div id="page-register" class="hidden">
+        <!-- سيتم ملء المحتوى هنا -->
+      </div>
+
+      <!-- (صفحة حسابي) -->
+      <div id="page-account" class="hidden">
+        <!-- سيتم ملء المحتوى هنا -->
+      </div>
+      
+    </div>
+  </main>
+
+  <!-- 3. الفوتر (Footer) -->
+  <footer id="footer-container" class="bg-gray-800 text-gray-300 mt-20 p-10">
+    <!-- سيتم ملء المحتوى هنا بواسطة الجافاسكريبت -->
+  </footer>
+
+
+  <!-- (Firebase SDKs) -->
+  <script type="module">
+    // (استيراد الدوال الأساسية)
+    import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInAnonymously, 
+      onAuthStateChanged,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      getDoc, 
+      getDocs,
+      setDoc, 
+      addDoc,
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot, 
+      collection, 
+      query, 
+      where,
+      Timestamp,
+      runTransaction,
+      writeBatch
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- 1. الإعدادات والتهيئة ---
+
+    // إعدادات Firebase الخاصة بك
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJKHjHfZnYCSBNwVKodBDguhiQYToDzkE",
+      authDomain: "ecchrinow.firebaseapp.com",
+      projectId: "ecchrinow",
+      storageBucket: "ecchrinow.firebasestorage.app",
+      messagingSenderId: "684711211815",
+      appId: "1:684711211815:web:0bb9b7bc1a0ae398ec6f02",
+      measurementId: "G-BBQZ91Y2PZ"
+    };
+
+    // (المتغيرات العامة)
+    let app, db, auth;
+    let products = [];
+    let cartItems = [];
+    let slides = [];
+    let currentSlide = 0;
+    let slideInterval;
+    let searchQuery = '';
+    let selectedCategory = 'all';
+    
+    // (حالة المستخدم)
+    let authReady = false;
+    let currentUser = null; // (لتخزين معلومات المستخدم)
+    let userId = null; // (لتخزين UID)
+
+    // (مسارات Firestore)
+    const appId = firebaseConfig.appId;
+    const productsCollectionPath = `artifacts/${appId}/public/data/products`;
+    const slidesCollectionPath = `artifacts/${appId}/public/data/slides`;
+    
+    // (دوال مسارات المستخدم)
+    const getCartCollectionPath = (uid) => `artifacts/${appId}/users/${uid}/cart`;
+    const getOrdersCollectionPath = (uid) => `artifacts/${appId}/users/${uid}/orders`;
+    const getAllOrdersCollectionPath = () => `artifacts/${appId}/public/data/all_orders`;
+
+
+    // (عقد DOM الرئيسية)
+    const mainLoader = document.getElementById('main-loader');
+    const appContent = document.getElementById('app-content');
+    const headerContainer = document.getElementById('header-container');
+    const footerContainer = document.getElementById('footer-container');
+    const notificationContainer = document.getElementById('notification-container');
+    
+    // (عقد DOM - حاويات الصفحات)
+    const pageList = document.getElementById('page-list');
+    const pageDetail = document.getElementById('page-detail');
+    const pageCart = document.getElementById('page-cart');
+    const pageCheckout = document.getElementById('page-checkout');
+    const pageLogin = document.getElementById('page-login');
+    const pageRegister = document.getElementById('page-register');
+    const pageAccount = document.getElementById('page-account');
+    
+    // (عقد DOM - صفحة القائمة)
+    const sliderContainer = document.getElementById('slider-container');
+    const categoriesContainer = document.getElementById('categories-container');
+    const productListContainer = document.getElementById('product-list-container');
+    
+    // (عقد DOM - أنيميشن السلة)
+    const flyToCartImg = document.getElementById('fly-to-cart-img');
+    
+    // (تهيئة Firebase)
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+      // setLogLevel('debug'); // (للتصحيح فقط)
+    } catch (e) {
+      console.error("Firebase initialization error:", e);
+      mainLoader.innerHTML = `<p class="text-center text-red-500 text-xl mt-10">فشل الاتصال بالخادم. يرجى إعادة تحميل الصفحة.</p>`;
+    }
+
+    // --- 2. دوال مساعدة (Helpers) ---
+
+    // (دالة الإشعارات)
+    function showNotification(message, type = 'success') {
+      const notif = document.createElement('div');
+      const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+      const icon = type === 'error' 
+        ? `<svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+        : `<svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      
+      notif.className = `flex items-center ${bgColor} text-white py-3 px-6 rounded-lg shadow-lg mb-2 animate-bounce`;
+      notif.innerHTML = `${icon}<span>${message}</span>`;
+      notificationContainer.appendChild(notif);
+      
+      setTimeout(() => {
+        notif.classList.remove('animate-bounce');
+        notif.classList.add('transition-opacity', 'duration-500', 'opacity-0');
+        setTimeout(() => notif.remove(), 500);
+      }, 3000);
+    }
+
+    // (تنسيق العملة)
+    function formatCurrency(price) {
+      return new Intl.NumberFormat('ar-DZ', { style: 'currency', currency: 'DZD', minimumFractionDigits: 0 }).format(price).replace('DZD', 'د.ج');
+    }
+
+    // (إظهار صفحة معينة)
+    function showPage(pageId) {
+      // (إخفاء كل الصفحات)
+      document.querySelectorAll('#app-content > div').forEach(page => {
+        page.classList.add('hidden');
+      });
+      // (إظهار الصفحة المطلوبة)
+      document.getElementById(pageId).classList.remove('hidden');
+      window.scrollTo(0, 0); // (الانتقال لأعلى الصفحة)
+    }
+    
+    // (تنسيق التاريخ)
+    function formatDate(timestamp) {
+        if (!timestamp || !timestamp.toDate) return '...';
+        return timestamp.toDate().toLocaleDateString('ar-EG', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    // --- 3. دوال رسم الواجهة (Render Functions) ---
+
+    // (رسم الشريط العلوي)
+    function renderHeader() {
+      const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+      let authButtons = '';
+      
+      if (authReady) {
+          if (currentUser && currentUser.email) {
+              // (مستخدم مسجل بإيميل)
+              authButtons = `
+                <button data-action="go-account" class="flex items-center gap-1 text-gray-600 hover:text-orange-500 icon-hover-scale">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                  <span class="text-sm font-semibold">حسابي</span>
+                </button>
+                <button data-action="logout" class="flex items-center gap-1 text-gray-600 hover:text-red-500 icon-hover-scale">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3 3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                  <span class="text-sm font-semibold">خروج</span>
+                </button>
+              `;
+          } else {
+              // (مستخدم مجهول)
+              authButtons = `
+                <button data-action="go-login" class="flex items-center gap-1 text-gray-600 hover:text-orange-500 icon-hover-scale">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3 3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                  <span class="text-sm font-semibold">دخول</span>
+                </button>
+                <button data-action="go-register" class="flex items-center gap-1 text-gray-600 hover:text-orange-500 icon-hover-scale">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                  <span class="text-sm font-semibold">إنشاء حساب</span>
+                </button>
+              `;
+          }
+      }
+      
+      headerContainer.innerHTML = `
+        <!-- (الجزء العلوي للهاتف) -->
+        <div class="w-full flex justify-between items-center md:hidden">
+          <img src="https://i.ibb.co/xSwNKr6P/mini.png" alt="ECHRI NOW Logo" class="h-16 cursor-pointer" data-action="go-home">
+          <div class="flex items-center gap-4">
+            ${authButtons}
+            <button id="cart-button" data-action="go-cart" class="relative text-gray-600 hover:text-orange-500 icon-hover-scale">
+              <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              ${cartItemCount > 0 ? `<span class="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">${cartItemCount}</span>` : ''}
+            </button>
+          </div>
+        </div>
+        
+        <!-- (شريط البحث للهاتف) -->
+        <div class="w-full md:hidden mt-4">
+          <div class="relative">
+            <input id="search-input-mobile" type="text" placeholder="ابحث عن منتج..." class="w-full p-2 border border-gray-300 rounded-lg pr-10" value="${searchQuery}">
+            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+        </div>
+
+        <!-- (التصميم للكمبيوتر) -->
+        <div class="hidden md:flex w-full justify-between items-center">
+          <img src="https://i.ibb.co/xSwNKr6P/mini.png" alt="ECHRI NOW Logo" class="h-16 cursor-pointer" data-action="go-home">
+          <div class="relative w-full max-w-lg mx-8">
+            <input id="search-input-desktop" type="text" placeholder="ابحث عن منتج..." class="w-full p-3 border border-gray-300 rounded-lg pr-10" value="${searchQuery}">
+            <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          </div>
+          <div class="flex items-center gap-6">
+            ${authButtons}
+            <button id="cart-button-desktop" data-action="go-cart" class="relative text-gray-600 hover:text-orange-500 icon-hover-scale">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+              ${cartItemCount > 0 ? `<span class="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">${cartItemCount}</span>` : ''}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    // (رسم الفوتر - تم تعديل الرابط)
+    function renderFooter() {
+        footerContainer.innerHTML = `
+            <div class="container mx-auto max-w-7xl grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-right">
+                <div>
+                    <img src="https://i.ibb.co/xSwNKr6P/mini.png" alt="ECHRI NOW Logo" class="h-16 mx-auto md:mx-0 mb-4">
+                    <p class="text-gray-400">متجرك الأول للتسوق عبر الإنترنت. نوفر لك أحدث المنتجات بأفضل الأسعار.</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold text-white mb-4">روابط سريعة</h4>
+                    <ul class="space-y-2">
+                        <li><button data-action="go-home" class="text-gray-400 hover:text-orange-500">الرئيسية</button></li>
+                        <li><button data-action="go-cart" class="text-gray-400 hover:text-orange-500">السلة</button></li>
+                        <li><button data-action="go-account" class="text-gray-400 hover:text-orange-500">حسابي</button></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold text-white mb-4">تواصل معنا</h4>
+                    <div class="flex justify-center md:justify-end gap-6">
+                        <!-- (تم تحديث الرابط هنا) -->
+                        <a href="https://www.facebook.com/echriinow" target="_blank" rel="noopener noreferrer" class="text-gray-400 hover:text-orange-500 icon-hover-scale">
+                            <!-- (أيقونة فيسبوك) -->
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.675 0H1.325C.593 0 0 .593 0 1.325v21.35C0 23.407.593 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116c.732 0 1.325-.593 1.325-1.325V1.325C24 .593 23.407 0 22.675 0z"></path></svg>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-orange-500 icon-hover-scale">
+                            <!-- (أيقونة تويتر) -->
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.997 4.997 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.997 4.997 0 01-2.22.085a4.935 4.935 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"></path></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center">
+                <p class="text-sm text-gray-400">&copy; 2025 ECHRI NOW. جميع الحقوق محفوظة.</p>
+            </div>
+        `;
+    }
+
+    // (رسم السلايدر - تم التحديث)
+    function renderSlider() {
+      if (slides.length === 0) {
+        sliderContainer.innerHTML = `<div class="w-full aspect-square md:h-96 md:aspect-auto flex items-center justify-center bg-gray-700 rounded-xl"><p>لا توجد عروض حالياً</p></div>`;
+        return;
+      }
+
+      sliderContainer.innerHTML = `
+        ${slides.map((slide, index) => `
+          <div class="slider-item ${index === currentSlide ? 'active' : ''} w-full h-full relative aspect-square md:h-96 md:aspect-auto rounded-xl">
+            <!-- (الصورة ستأخذ أنيميشن كين بيرنز) -->
+            <img src="${slide.imageUrl}" alt="${slide.title}" class="slider-bg-image w-full h-full object-cover rounded-xl">
+            
+            <!-- (المحتوى سيأخذ أنيميشن صعود) -->
+            <div class="slide-content absolute bottom-0 left-0 right-0 p-6 md:p-12 text-center">
+              <h2 class="text-2xl md:text-5xl font-bold text-white mb-2 text-shadow">${slide.title}</h2>
+              <p class="text-lg md:text-2xl text-gray-200 mb-6 text-shadow">${slide.subtitle}</p>
+              ${slide.buttonText && slide.link ? `
+                <a href="${slide.link}" target="_blank" class="bg-orange-500 text-white py-3 px-8 rounded-lg text-lg font-semibold hover:bg-orange-600 transition duration-300">
+                  ${slide.buttonText}
+                </a>
+              ` : ''}
+            </div>
+          </div>
+        `).join('')}
+        
+        <!-- (أزرار التنقل) -->
+        <button data-action="slider-prev" class="absolute top-1/2 left-4 -translate-y-1/2 bg-black bg-opacity-30 text-white p-2 rounded-full hover:bg-opacity-50 transition z-10">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+        </button>
+        <button data-action="slider-next" class="absolute top-1/2 right-4 -translate-y-1/2 bg-black bg-opacity-30 text-white p-2 rounded-full hover:bg-opacity-50 transition z-10">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+        
+        <!-- (مؤشرات التنقل) -->
+        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+          ${slides.map((_, index) => `
+            <button data-action="slider-goto" data-index="${index}" class="w-3 h-3 rounded-full ${index === currentSlide ? 'bg-orange-500' : 'bg-gray-300 bg-opacity-50'}"></button>
+          `).join('')}
+        </div>
+      `;
+    }
+    
+    // (التحكم بالسلايدر)
+    function updateSlider(index) {
+        currentSlide = index;
+        document.querySelectorAll('.slider-item').forEach((item, i) => {
+            item.classList.toggle('active', i === currentSlide);
+        });
+        document.querySelectorAll('[data-action="slider-goto"]').forEach((btn, i) => {
+            btn.classList.toggle('bg-orange-500', i === currentSlide);
+            btn.classList.toggle('bg-gray-300', i !== currentSlide);
+            btn.classList.toggle('bg-opacity-50', i !== currentSlide);
+        });
+        
+        // (إعادة تشغيل المؤقت)
+        clearInterval(slideInterval);
+        slideInterval = setInterval(() => {
+            const next = (currentSlide + 1) % slides.length;
+            updateSlider(next);
+        }, 5000);
+    }
+
+    // (رسم قائمة المنتجات - تم تعديل الحشو)
+    function renderProductList() {
+      // 1. استخراج الفئات
+      const categories = ['all', ...new Set(products.map(p => p.category).filter(Boolean))];
+      categoriesContainer.innerHTML = categories.map(cat => {
+        const isActive = cat === selectedCategory;
+        const activeClass = isActive ? 'bg-orange-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100';
+        return `<button data-action="filter-category" data-category="${cat}" class="px-5 py-2 rounded-full shadow-sm font-semibold transition duration-300 ${activeClass}">
+                  ${cat === 'all' ? 'الكل' : cat}
+                </button>`;
+      }).join('');
+
+      // 2. فلترة المنتجات (بالبحث المطور ثم بالفئة)
+      let filteredProducts = products.filter(product => {
+          const query = searchQuery.toLowerCase();
+          return product.name.toLowerCase().includes(query) ||
+                 (product.description && product.description.toLowerCase().includes(query)) ||
+                 (product.category && product.category.toLowerCase().includes(query));
+      });
+      
+      if (selectedCategory !== 'all') {
+        filteredProducts = filteredProducts.filter(product => product.category === selectedCategory);
+      }
+
+      // 3. رسم المنتجات
+      if (filteredProducts.length === 0) {
+          productListContainer.innerHTML = `<p class="text-center text-gray-500 text-xl mt-10 col-span-full">لا توجد منتجات مطابقة للبحث.</p>`;
+          return;
+      }
+      
+      productListContainer.innerHTML = filteredProducts.map(product => {
+          const mainImage = (product.imageUrls && product.imageUrls.length > 0) 
+            ? product.imageUrls[0] 
+            : 'https://placehold.co/400x400/cccccc/ffffff?text=خطأ';
+            
+          return `
+            <!-- (إضافة .product-card للأنيميشن) -->
+            <div 
+              class="product-card product-card-hover bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer border border-gray-200"
+              data-action="view-product"
+              data-product-id="${product.id}"
+            >
+              <div class="aspect-square w-full bg-gray-100 overflow-hidden">
+                <img src="${mainImage}" alt="${product.name}" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/400x400/cccccc/ffffff?text=خطأ'">
+              </div>
+              <!-- (تم تعديل الحشو هنا) -->
+              <div class="p-3 md:p-5 text-center">
+                <h3 class="text-xl font-bold text-gray-800 mb-2 h-14 overflow-hidden">${product.name}</h3>
+                ${product.stock === 0 ? `
+                  <p class="text-lg font-bold text-red-500">نفذت الكمية</p>
+                ` : `
+                  <p class="text-2xl font-bold text-orange-600">${formatCurrency(product.price)}</p>
+                `}
+              </div>
+            </div>
+          `}).join('');
+      
+      // (تفعيل الأنيميشن عند التمرير)
+      observeProductCards();
+    }
+    
+    // (رسم هياكل التحميل)
+    function renderSkeletons() {
+        let skeletonHtml = '';
+        for (let i = 0; i < 8; i++) {
+            skeletonHtml += `
+                <div class="skeleton-card animate-pulse">
+                    <div class="skeleton-img w-full"></div>
+                    <!-- (تم تعديل الحشو هنا) -->
+                    <div class="p-3 md:p-5 space-y-3">
+                        <div class="skeleton-text w-3/4 h-6 mx-auto"></div>
+                        <div class="skeleton-text w-1/2 h-8 mx-auto"></div>
+                    </div>
+                </div>
+            `;
+        }
+        productListContainer.innerHTML = skeletonHtml;
+        
+        // (هيكل تحميل السلايدر)
+        sliderContainer.innerHTML = `<div class="w-full aspect-square md:h-96 md:aspect-auto bg-gray-300 animate-pulse rounded-xl"></div>`;
+        
+        // (هيكل تحميل الفئات)
+        categoriesContainer.innerHTML = `
+            <div class="flex justify-center gap-2 mb-8 flex-wrap">
+                <div class="bg-gray-300 animate-pulse h-11 w-20 rounded-full"></div>
+                <div class="bg-gray-300 animate-pulse h-11 w-24 rounded-full"></div>
+                <div class="bg-gray-300 animate-pulse h-11 w-20 rounded-full"></div>
+            </div>
+        `;
+    }
+
+    // (رسم صفحة تفاصيل المنتج - تم التحديث)
+    async function renderProductDetail(productId) {
+      const product = products.find(p => p.id === productId);
+      if (!product) {
+        showNotification("لم يتم العثور على المنتج.", 'error');
+        showPage('page-list');
+        return;
+      }
+      
+      const imageUrls = (product.imageUrls && product.imageUrls.length > 0) 
+        ? product.imageUrls 
+        : ['https://placehold.co/600x600/cccccc/ffffff?text=خطأ'];
+      
+      const mainImage = imageUrls[0];
+
+      pageDetail.innerHTML = `
+        <div class="bg-white p-6 md:p-10 rounded-lg shadow-xl">
+          <button data-action="go-home" class="flex items-center gap-2 text-orange-600 font-semibold hover:text-orange-700 mb-6">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+            العودة للمنتجات
+          </button>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+            <!-- (معرض الصور - تم التحديث) -->
+            <div>
+              <div class="bg-gray-100 rounded-lg overflow-hidden aspect-square mb-4">
+                <img id="detail-product-img" src="${mainImage}" alt="${product.name}" class="w-full h-full object-contain" onerror="this.src='https://placehold.co/600x600/cccccc/ffffff?text=خطأ'">
+              </div>
+              <!-- (الصور المصغرة) -->
+              <div id="product-thumbnails" class="flex gap-2 justify-center">
+                ${imageUrls.map((url, index) => `
+                  <img src="${url}" alt="thumbnail ${index + 1}" 
+                       data-action="select-thumbnail" 
+                       data-src="${url}" 
+                       class="w-16 h-16 object-contain rounded-md border-2 p-1 bg-white thumbnail-img ${index === 0 ? 'active' : ''}"
+                       onerror="this.src='https://placehold.co/100x100/cccccc/ffffff?text=خطأ'">
+                `).join('')}
+              </div>
+            </div>
+            
+            <!-- (التفاصيل) -->
+            <div class="flex flex-col justify-center">
+              <h2 class="text-2xl md:text-5xl font-bold text-gray-900 mb-4">${product.name}</h2>
+              <p class="text-gray-600 text-lg mb-6">${product.description}</p>
+              
+              <div class="mb-8">
+                ${product.stock === 0 ? `
+                  <p class="text-3xl md:text-4xl font-bold text-red-500">نفذت الكمية</p>
+                ` : `
+                  <p class="text-3xl md:text-5xl font-bold text-orange-600">${formatCurrency(product.price)}</p>
+                `}
+              </div>
+
+              ${product.stock > 0 ? `
+                <button 
+                  data-action="add-to-cart"
+                  data-product-id="${product.id}"
+                  class="w-full bg-orange-500 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:bg-orange-600 transition duration-300 flex items-center justify-center gap-2"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                  أضف إلى السلة
+                </button>
+              ` : `
+                <button class="w-full bg-gray-400 text-white py-4 px-8 rounded-lg text-lg font-semibold cursor-not-allowed" disabled>
+                  نفذت الكمية
+                </button>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // (رسم صفحة السلة - تم إصلاح التنسيق للهاتف)
+    function renderCart() {
+      if (cartItems.length === 0) {
+        pageCart.innerHTML = `
+          <div class="text-center p-10 bg-white rounded-lg shadow-xl">
+            <svg class="w-20 h-20 text-gray-300 mx-auto mb-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            <h2 class="text-3xl font-bold text-gray-800 mb-4">سلة المشتريات فارغة</h2>
+            <p class="text-gray-500 mb-8">لم تقم بإضافة أي منتجات إلى السلة بعد.</p>
+            <button data-action="go-home" class="bg-orange-500 text-white py-3 px-8 rounded-lg text-lg font-semibold hover:bg-orange-600 transition duration-300">
+              ابدأ التسوق
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+      const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      pageCart.innerHTML = `
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-8 text-center">سلة المشتريات</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <!-- (قائمة المنتجات في السلة) -->
+          <div class="lg:col-span-2 bg-white rounded-lg shadow-xl p-6">
+            ${cartItems.map(item => {
+                const product = products.find(p => p.id === item.id) || { stock: item.quantity }; // (للسماح بالكمية الحالية)
+                const availableStock = product.stock;
+                
+                return `
+                <!-- (تم إصلاح التنسيق هنا للهاتف) -->
+                <div class="flex flex-col md:flex-row items-center gap-4 border-b pb-4 mb-4">
+                  <!-- (معلومات المنتج) -->
+                  <div class="flex items-center gap-4 w-full">
+                    <img src="${item.imageUrl}" alt="${item.name}" class="w-20 h-20 object-contain rounded-lg border">
+                    <div class="flex-1">
+                      <h3 class="text-lg font-semibold">${item.name}</h3>
+                      <p class="text-gray-500">${formatCurrency(item.price)}</p>
+                      <p class="text-lg font-bold text-orange-600 md:hidden mt-1">${formatCurrency(item.price * item.quantity)}</p>
+                    </div>
+                  </div>
+                  <!-- (أدوات التحكم) -->
+                  <div class="flex items-center justify-between w-full md:w-auto md:gap-4">
+                    <div class="flex items-center gap-2 border rounded-lg p-2">
+                      <button data-action="update-cart" data-id="${item.id}" data-change="-1" class="text-orange-500 hover:text-orange-700" ${item.quantity <= 1 ? 'disabled' : ''}>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                      </button>
+                      <span class="w-8 text-center font-semibold">${item.quantity}</span>
+                      <button data-action="update-cart" data-id="${item.id}" data-change="1" class="text-orange-500 hover:text-orange-700" ${item.quantity >= availableStock ? 'disabled' : ''}>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                      </button>
+                    </div>
+                    <p class="text-lg font-bold w-24 text-center hidden md:block">${formatCurrency(item.price * item.quantity)}</p>
+                    <button data-action="remove-from-cart" data-id="${item.id}" class="text-red-500 hover:text-red-700" title="حذف">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              `}).join('')}
+          </div>
+          
+          <!-- (ملخص السلة) -->
+          <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-xl p-6 sticky top-28">
+              <h3 class="text-2xl font-bold mb-6 border-b pb-4">ملخص الطلب</h3>
+              <div class="flex justify-between items-center mb-4">
+                <span class="text-lg text-gray-600">المجموع الفرعي</span>
+                <span class="text-xl font-semibold">${formatCurrency(subtotal)}</span>
+              </div>
+              <div class="flex justify-between items-center mb-6">
+                <span class="text-lg text-gray-600">الشحن</span>
+                <span class="text-xl font-semibold">يُحدد لاحقاً</span>
+              </div>
+              <div class="flex justify-between items-center text-2xl font-bold border-t pt-4">
+                <span>الإجمالي</span>
+                <span>${formatCurrency(subtotal)}</span>
+              </div>
+              <button data-action="go-checkout" class="w-full mt-8 bg-orange-500 text-white py-3 px-8 rounded-lg text-lg font-semibold hover:bg-orange-600 transition duration-300">
+                الانتقال إلى الدفع
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // (رسم صفحة الدفع)
+    function renderCheckout() {
+      const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      pageCheckout.innerHTML = `
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-8 text-center">إتمام الطلب</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <!-- (نموذج معلومات الزبون) -->
+          <div class="bg-white rounded-lg shadow-xl p-8">
+            <h3 class="text-2xl font-bold mb-6">معلومات الزبون</h3>
+            <form id="checkout-form" class="space-y-4">
+              <input id="checkout-name" type="text" placeholder="الاسم الكامل" class="p-3 border rounded w-full" value="${(currentUser && currentUser.displayName) || ''}" required />
+              <input id="checkout-phone" type="tel" placeholder="رقم الهاتف" class="p-3 border rounded w-full" required />
+              <input id="checkout-address" type="text" placeholder="العنوان (المدينة، الولاية، ...)" class="p-3 border rounded w-full" required />
+              ${(currentUser && currentUser.email) ? 
+                `<input id="checkout-email" type="email" class="p-3 border rounded w-full bg-gray-100" value="${currentUser.email}" disabled />` : 
+                `<input id="checkout-email" type="email" placeholder="البريد الإلكتروني (اختياري)" class="p-3 border rounded w-full" />`
+              }
+            </form>
+          </div>
+          
+          <!-- (ملخص الطلب للدفع) -->
+          <div class="bg-white rounded-lg shadow-xl p-8">
+            <h3 class="text-2xl font-bold mb-6">ملخص الطلب</h3>
+            <div class="max-h-60 overflow-y-auto border-b pb-4">
+              ${cartItems.map(item => `
+                <div class="flex justify-between items-center mb-3">
+                  <div class="flex items-center gap-3">
+                    <img src="${item.imageUrl}" alt="${item.name}" class="w-12 h-12 object-contain rounded border">
+                    <div>
+                      <p class="font-semibold">${item.name}</p>
+                      <p class="text-sm text-gray-500">الكمية: ${item.quantity}</p>
+                    </div>
+                  </div>
+                  <p class="font-semibold">${formatCurrency(item.price * item.quantity)}</p>
+                </div>
+              `).join('')}
+            </div>
+            <div class="flex justify-between items-center text-2xl font-bold border-t pt-6 mt-4">
+              <span>الإجمالي:</span>
+              <span>${formatCurrency(subtotal)}</span>
+            </div>
+            <button data-action="submit-checkout" class="w-full mt-8 bg-orange-500 text-white py-4 px-8 rounded-lg text-lg font-semibold hover:bg-orange-600 transition duration-300">
+              تأكيد الطلب
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    // (رسم صفحة تسجيل الدخول)
+    function renderLogin() {
+        pageLogin.innerHTML = `
+            <div class="max-w-lg mx-auto bg-white p-8 md:p-12 rounded-lg shadow-xl">
+                <img src="https://i.ibb.co/xSwNKr6P/mini.png" alt="ECHRI NOW Logo" class="h-20 mx-auto mb-6">
+                <h2 class="text-3xl font-bold mb-8 text-center">تسجيل الدخول</h2>
+                <form id="login-form" class="space-y-6">
+                    <input id="login-email" type="email" placeholder="البريد الإلكتروني" class="p-3 border rounded w-full" required />
+                    <input id="login-password" type="password" placeholder="كلمة السر" class="p-3 border rounded w-full" required />
+                    <button type="submit" class="w-full bg-orange-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition">
+                        تسجيل الدخول
+                    </button>
+                </form>
+                <p class="text-center text-gray-600 mt-6">
+                    ليس لديك حساب؟ 
+                    <button data-action="go-register" class="font-semibold text-orange-600 hover:underline">إنشاء حساب جديد</button>
+                </p>
+            </div>
+        `;
+    }
+    
+    // (رسم صفحة إنشاء حساب)
+    function renderRegister() {
+        pageRegister.innerHTML = `
+            <div class="max-w-lg mx-auto bg-white p-8 md:p-12 rounded-lg shadow-xl">
+                <img src="https://i.ibb.co/xSwNKr6P/mini.png" alt="ECHRI NOW Logo" class="h-20 mx-auto mb-6">
+                <h2 class="text-3xl font-bold mb-8 text-center">إنشاء حساب جديد</h2>
+                <form id="register-form" class="space-y-6">
+                    <input id="register-name" type="text" placeholder="الاسم الكامل" class="p-3 border rounded w-full" required />
+                    <input id="register-email" type="email" placeholder="البريد الإلكتروني" class="p-3 border rounded w-full" required />
+                    <input id="register-password" type="password" placeholder="كلمة السر (6 أحرف على الأقل)" class="p-3 border rounded w-full" minlength="6" required />
+                    <button type="submit" class="w-full bg-orange-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition">
+                        إنشاء الحساب
+                    </button>
+                </form>
+                <p class="text-center text-gray-600 mt-6">
+                    لديك حساب بالفعل؟ 
+                    <button data-action="go-login" class="font-semibold text-orange-600 hover:underline">تسجيل الدخول</button>
+                </p>
+            </div>
+        `;
+    }
+    
+    // (رسم صفحة حسابي)
+    function renderAccount() {
+        if (!currentUser || !currentUser.email) {
+            showPage('page-login');
+            return;
+        }
+        
+        pageAccount.innerHTML = `
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-8 text-center">حسابي</h2>
+            <div class="bg-white p-8 rounded-lg shadow-xl max-w-4xl mx-auto">
+                <h3 class="text-2xl font-bold mb-4">مرحباً، ${currentUser.displayName || currentUser.email}</h3>
+                <p class="text-gray-600 mb-8">هنا يمكنك مراجعة طلباتك السابقة.</p>
+                
+                <h4 class="text-xl font-bold border-t pt-6 mb-4">طلباتي السابقة</h4>
+                <div id="my-orders-list" class="space-y-4">
+                    <!-- سيتم تحميل الطلبات هنا -->
+                    <div class="text-center p-8">
+                        <div class="w-8 h-8 border-4 border-orange-500 border-dashed rounded-full animate-spin mx-auto"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        fetchMyOrders();
+    }
+
+    // --- 4. دوال جلب البيانات (Firebase Logic) ---
+
+    // (جلب اللافتات)
+    async function fetchSlides() {
+        try {
+            const snapshot = await getDocs(collection(db, slidesCollectionPath));
+            slides = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            currentSlide = 0;
+            renderSlider();
+            
+            // (بدء مؤقت السلايدر)
+            clearInterval(slideInterval);
+            slideInterval = setInterval(() => {
+                const next = (currentSlide + 1) % slides.length;
+                updateSlider(next);
+            }, 5000); // (كل 5 ثوانٍ)
+            
+        } catch (error) {
+            console.error("Error fetching slides:", error);
+            sliderContainer.innerHTML = `<div class="w-full aspect-square md:h-96 md:aspect-auto flex items-center justify-center bg-gray-700 rounded-xl"><p class="text-red-300">خطأ في تحميل العروض</p></div>`;
+        }
+    }
+
+    // (جلب المنتجات)
+    async function fetchProducts() {
+        try {
+            const snapshot = await getDocs(collection(db, productsCollectionPath));
+            products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderProductList(); // (رسم القائمة بعد جلبها)
+        } catch (error) {
+            console.error("Error fetching products:", error);
+            productListContainer.innerHTML = `<p class="text-center text-red-500 text-xl mt-10 col-span-full">خطأ في تحميل المنتجات. يرجى المحاولة لاحقاً.</p>`;
+        }
+    }
+    
+    // (جلب السلة)
+    function fetchCart() {
+        if (!userId) return;
+        
+        const q = query(collection(db, getCartCollectionPath(userId)));
+        
+        // (استخدام onSnapshot للاستماع لتغييرات السلة)
+        onSnapshot(q, (snapshot) => {
+            cartItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderHeader(); // (تحديث عدد السلة في الهيدر)
+            
+            // (تحديث الصفحة الحالية إذا كانت السلة)
+            if (document.getElementById('page-cart').classList.contains('hidden') === false) {
+                renderCart();
+            }
+        }, (error) => {
+            console.error("Error fetching cart:", error);
+            // (لا تظهر إشعار خطأ في كل مرة، فقط سجل في الكونسول)
+            // showNotification("خطأ في مزامنة السلة.", 'error');
+        });
+    }
+    
+    // (جلب طلباتي)
+    async function fetchMyOrders() {
+        if (!userId) return;
+        const myOrdersList = document.getElementById('my-orders-list');
+        
+        try {
+            const q = query(collection(db, getOrdersCollectionPath(userId)));
+            const snapshot = await getDocs(q);
+            
+            if (snapshot.empty) {
+                myOrdersList.innerHTML = `<p class="text-gray-500 text-center">لم تقم بأي طلبات بعد.</p>`;
+                return;
+            }
+            
+            myOrdersList.innerHTML = snapshot.docs.map(doc => {
+                const order = doc.data();
+                const statusText = {
+                    pending: 'قيد الانتظار',
+                    shipped: 'تم الشحن',
+                    completed: 'مكتمل'
+                };
+                const statusColor = {
+                    pending: 'text-yellow-600 bg-yellow-100',
+                    shipped: 'text-blue-600 bg-blue-100',
+                    completed: 'text-green-600 bg-green-100'
+                };
+                
+                return `
+                    <div class="border rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <div>
+                                <p class="font-bold">طلب #${doc.id.substring(0, 6)}</p>
+                                <p class="text-sm text-gray-500">التاريخ: ${formatDate(order.createdAt)}</p>
+                            </div>
+                            <span class="font-semibold px-3 py-1 rounded-full text-sm ${statusColor[order.status] || ''}">
+                                ${statusText[order.status] || '...'}
+                            </span>
+                        </div>
+                        <div class="border-t pt-2">
+                            ${order.items.map(item => `<p class="text-sm text-gray-600">${item.name} (x${item.quantity})</p>`).join('')}
+                            <p class="text-lg font-bold text-right mt-2">الإجمالي: ${formatCurrency(order.total)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        } catch (error) {
+            console.error("Error fetching my orders:", error);
+            myOrdersList.innerHTML = `<p class="text-red-500 text-center">خطأ في تحميل طلباتك.</p>`;
+        }
+    }
+    
+    // (إضافة منتج للسلة - تم التحديث)
+    async function handleAddToCart(productId, fromPage = 'list') {
+        if (!userId || !authReady) {
+            // (لا تقم بالإضافة إذا لم يكن المستخدم جاهزاً - هذا هو الإصلاح)
+            showNotification("جاري تهيئة السلة، يرجى المحاولة بعد لحظات.", 'error');
+            return;
+        }
+        
+        const product = products.find(p => p.id === productId);
+        if (!product || product.stock <= 0) {
+            showNotification("هذا المنتج غير متوفر حالياً.", 'error');
+            return;
+        }
+        
+        // (تحديد الصورة الرئيسية للسلة)
+        const mainImage = (product.imageUrls && product.imageUrls.length > 0) 
+            ? product.imageUrls[0] 
+            : 'https://placehold.co/100x100/cccccc/ffffff?text=خطأ';
+
+        const cartDocRef = doc(db, getCartCollectionPath(userId), productId);
+        
+        try {
+            const docSnap = await getDoc(cartDocRef);
+            
+            if (docSnap.exists()) {
+                // (المنتج موجود، زيادة الكمية)
+                const currentQuantity = docSnap.data().quantity;
+                if (currentQuantity + 1 > product.stock) {
+                    showNotification("لا يمكنك إضافة كمية أكبر من المخزون المتوفر.", 'error');
+                    return;
+                }
+                await updateDoc(cartDocRef, { quantity: currentQuantity + 1 });
+            } else {
+                // (المنتج جديد، إضافته للسلة)
+                await setDoc(cartDocRef, {
+                    name: product.name,
+                    price: product.price,
+                    imageUrl: mainImage, // (استخدام الصورة الرئيسية)
+                    quantity: 1
+                });
+            }
+            
+            showNotification(`تم إضافة "${product.name}" إلى السلة!`, 'success');
+            
+            // (تشغيل أنيميشن الطيران إذا كان من صفحة التفاصيل)
+            if (fromPage === 'detail') {
+                const productImg = document.getElementById('detail-product-img');
+                const cartBtn = document.getElementById('cart-button-desktop') || document.getElementById('cart-button');
+                if (productImg && cartBtn) {
+                    flyToCart(productImg, cartBtn);
+                }
+            }
+            
+        } catch (error) {
+            console.error("Error adding to cart:", error);
+            showNotification("خطأ أثناء إضافة المنتج للسلة.", 'error');
+        }
+    }
+    
+    // (تحديث كمية السلة)
+    async function handleUpdateCart(productId, change) {
+        if (!userId) return;
+        
+        const cartDocRef = doc(db, getCartCollectionPath(userId), productId);
+        const newQuantity = cartItems.find(item => item.id === productId).quantity + change;
+        
+        if (newQuantity <= 0) {
+            await deleteDoc(cartDocRef); // (حذف إذا كانت الكمية 0)
+        } else {
+            // (التحقق من المخزون قبل الزيادة)
+            const product = products.find(p => p.id === productId);
+            if (product && newQuantity > product.stock) {
+                showNotification("لا يمكنك إضافة كمية أكبر من المخزون المتوفر.", 'error');
+                return;
+            }
+            await updateDoc(cartDocRef, { quantity: newQuantity });
+        }
+    }
+
+    // (حذف من السلة)
+    async function handleRemoveFromCart(productId) {
+        if (!userId) return;
+        const cartDocRef = doc(db, getCartCollectionPath(userId), productId);
+        await deleteDoc(cartDocRef);
+        showNotification("تم حذف المنتج من السلة.", 'success');
+    }
+    
+    // (إتمام الطلب)
+    async function handleCheckout() {
+        // (التحقق من بيانات النموذج)
+        const name = document.getElementById('checkout-name').value;
+        const phone = document.getElementById('checkout-phone').value;
+        const address = document.getElementById('checkout-address').value;
+        const email = document.getElementById('checkout-email').value || null;
+        
+        if (!name || !phone || !address) {
+            showNotification("الرجاء ملء جميع الحقول المطلوبة (الاسم، الهاتف، العنوان).", 'error');
+            return;
+        }
+
+        const total = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const orderData = {
+            userId: (currentUser && currentUser.email) ? userId : null, // (تتبع الزبون المسجل فقط)
+            userEmail: (currentUser && currentUser.email) ? currentUser.email : (email || 'زبون مجهول'),
+            name: name,
+            phone: phone,
+            address: address,
+            items: cartItems,
+            total: total,
+            status: 'pending', // (الحالة الافتراضية)
+            createdAt: Timestamp.now()
+        };
+
+        try {
+            await runTransaction(db, async (transaction) => {
+                const stockUpdates = [];
+                
+                // 1. (التحقق من المخزون لكل منتج)
+                for (const item of cartItems) {
+                    const productRef = doc(db, productsCollectionPath, item.id);
+                    const productDoc = await transaction.get(productRef);
+                    
+                    if (!productDoc.exists()) {
+                        throw new Error(`المنتج "${item.name}" لم يعد متوفراً.`);
+                    }
+                    
+                    const currentStock = productDoc.data().stock;
+                    if (currentStock < item.quantity) {
+                        throw new Error(`الكمية المطلوبة لـ "${item.name}" غير متوفرة (المتبقي: ${currentStock}).`);
+                    }
+                    
+                    // 2. (تجهيز تحديث المخزون)
+                    const newStock = currentStock - item.quantity;
+                    stockUpdates.push({ ref: productRef, newStock: newStock });
+                }
+                
+                // 3. (تحديث المخزون - تم الإصلاح)
+                for (const update of stockUpdates) {
+                    // (تم إصلاح خطأ 'newStock is not defined' هنا)
+                    transaction.update(update.ref, { stock: update.newStock });
+                }
+                
+                // 4. (حفظ الطلب في السجل العام للمدير)
+                const adminOrderRef = doc(collection(db, getAllOrdersCollectionPath()));
+                transaction.set(adminOrderRef, orderData);
+                
+                // 5. (حفظ الطلب في سجل الزبون إذا كان مسجلاً بإيميل)
+                if (orderData.userId) {
+                    const userOrderRef = doc(collection(db, getOrdersCollectionPath(orderData.userId)));
+                    transaction.set(userOrderRef, orderData);
+                }
+                
+                // 6. (حذف السلة - استخدام Batch)
+                // (لا يمكن استخدام Batch داخل Transaction، سنحذفها بعد نجاح العملية)
+            });
+
+            // (نجحت العملية، الآن نحذف السلة)
+            const batch = writeBatch(db);
+            cartItems.forEach(item => {
+                const docRef = doc(db, getCartCollectionPath(userId), item.id);
+                batch.delete(docRef);
+            });
+            await batch.commit();
+
+            showNotification("تم تأكيد طلبك بنجاح!", 'success');
+            showPage('page-list'); // (العودة للرئيسية)
+            
+        } catch (error) {
+            console.error("خطأ في تأكيد الطلب:", error);
+            showNotification(error.message || "فشل تأكيد الطلب. يرجى المحاولة مجدداً.", 'error');
+        }
+    }
+    
+    // --- 5. دوال المصادقة (Auth Logic) ---
+    
+    // (إنشاء حساب)
+    async function handleRegister(e) {
+        e.preventDefault();
+        const name = document.getElementById('register-name').value;
+        const email = document.getElementById('register-email').value;
+        const password = document.getElementById('register-password').value;
+        
+        try {
+            // (إنشاء المستخدم)
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // (تحديث اسم المستخدم - اختياري)
+            // await updateProfile(userCredential.user, { displayName: name });
+            
+            showNotification(`مرحباً ${name}! تم إنشاء حسابك بنجاح.`, 'success');
+            showPage('page-list'); // (الانتقال للرئيسية بعد التسجيل)
+            
+        } catch (error) {
+            console.error("Register Error:", error);
+            showNotification("فشل إنشاء الحساب. قد يكون الإيميل مستخدماً.", 'error');
+        }
+    }
+
+    // (تسجيل الدخول)
+    async function handleLogin(e) {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            showNotification("أهلاً بعودتك!", 'success');
+            showPage('page-list'); // (الانتقال للرئيسية بعد الدخول)
+        } catch (error) {
+            console.error("Login Error:", error);
+            showNotification("فشل تسجيل الدخول. تأكد من الإيميل وكلمة السر.", 'error');
+        }
+    }
+    
+    // (تسجيل الخروج)
+    async function handleLogout() {
+        try {
+            await signOut(auth);
+            showNotification("تم تسجيل الخروج بنجاح.", 'success');
+            showPage('page-list'); // (البقاء في الرئيسية)
+        } catch (error) {
+            console.error("Logout Error:", error);
+            showNotification("خطأ أثناء تسجيل الخروج.", 'error');
+        }
+    }
+
+    // --- 6. دوال الأنيميشن ---
+
+    // (أنيميشن "الطيران إلى السلة")
+    function flyToCart(sourceEl, targetEl) {
+        if (!sourceEl || !targetEl) return;
+        const sourceRect = sourceEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+
+        // (تجهيز الصورة الطائرة)
+        flyToCartImg.src = sourceEl.src;
+        flyToCartImg.style.width = `${sourceRect.width / 2}px`;
+        flyToCartImg.style.height = `${sourceRect.height / 2}px`;
+        flyToCartImg.style.top = `${sourceRect.top + sourceRect.height / 4}px`;
+        flyToCartImg.style.left = `${sourceRect.left + sourceRect.width / 4}px`;
+        flyToCartImg.style.opacity = '1';
+        flyToCartImg.style.transform = 'translate(0, 0) scale(1)'; // (إعادة التعيين)
+
+        // (الوجهة)
+        const endTop = targetRect.top + targetRect.height / 2;
+        const endLeft = targetRect.left + targetRect.width / 2;
+        
+        // (بدء الأنيميشن)
+        requestAnimationFrame(() => {
+            flyToCartImg.style.transform = `translate(${endLeft - (sourceRect.left + sourceRect.width / 4)}px, ${endTop - (sourceRect.top + sourceRect.height / 4)}px) scale(0.1)`;
+            flyToCartImg.style.opacity = '0';
+        });
+    }
+
+    // (أنيميشن "الظهور عند التمرير")
+    function observeProductCards() {
+        const observer = new IntersectionObserver((entries, obs) => {
+            entries.forEach((entry, index) => {
+                if (entry.isIntersecting) {
+                    // (إضافة تأخير متدرج)
+                    setTimeout(() => {
+                        entry.target.classList.add('visible');
+                    }, index * 100); // (تأخير 100ms بين كل بطاقة)
+                    obs.unobserve(entry.target); // (إيقاف المراقبة بعد الظهور)
+                }
+            });
+        }, { threshold: 0.1 }); // (يظهر عندما يكون 10% من العنصر مرئياً)
+
+        document.querySelectorAll('.product-card').forEach(card => {
+            observer.observe(card);
+        });
+    }
+
+    // --- 7. رصد الأحداث (Event Listeners) ---
+
+    // (رصد النقرات العامة في الموقع - تم الإصلاح)
+    document.body.addEventListener('click', async (e) => { // (تحويلها إلى async)
+        // (تم الإصلاح: الاستماع لأي عنصر يحتوي على data-action)
+        const target = e.target.closest('[data-action]'); 
+        if (!target) return;
+
+        const action = target.dataset.action;
+        const id = target.dataset.productId || target.dataset.id;
+
+        switch (action) {
+            // (التنقل)
+            case 'go-home':
+                showPage('page-list');
+                renderProductList(); // (لإعادة تطبيق الفلاتر)
+                break;
+            case 'go-cart':
+                renderCart();
+                showPage('page-cart');
+                break;
+            case 'go-checkout':
+                renderCheckout();
+                showPage('page-checkout');
+                break;
+            case 'go-login':
+                renderLogin();
+                showPage('page-login');
+                break;
+            case 'go-register':
+                renderRegister();
+                showPage('page-register');
+                break;
+            case 'go-account':
+                renderAccount();
+                showPage('page-account');
+                break;
+            case 'logout':
+                handleLogout();
+                break;
+            
+            // (المنتجات)
+            case 'view-product':
+                await renderProductDetail(id); // (انتظار رسم الصفحة)
+                showPage('page-detail'); // (ثم إظهارها)
+                break;
+            case 'add-to-cart':
+                // (تحديد مصدر الإضافة للأنيميشن)
+                const page = document.getElementById('page-detail').classList.contains('hidden') ? 'list' : 'detail';
+                handleAddToCart(id, page);
+                break;
+            case 'filter-category':
+                selectedCategory = target.dataset.category;
+                renderProductList();
+                break;
+            // (تحديث معرض الصور)
+            case 'select-thumbnail':
+                const newSrc = target.dataset.src;
+                document.getElementById('detail-product-img').src = newSrc;
+                // (تحديث الحالة النشطة)
+                document.querySelectorAll('.thumbnail-img').forEach(img => img.classList.remove('active'));
+                target.classList.add('active');
+                break;
+            
+            // (السلة)
+            case 'update-cart':
+                const change = parseInt(target.dataset.change);
+                handleUpdateCart(id, change);
+                break;
+            case 'remove-from-cart':
+                handleRemoveFromCart(id);
+                break;
+                
+            // (الدفع)
+            case 'submit-checkout':
+                // (منع الضغط المتكرر)
+                target.disabled = true;
+                target.innerText = "جاري تأكيد الطلب...";
+                handleCheckout().finally(() => {
+                    target.disabled = false;
+                    target.innerText = "تأكيد الطلب";
+                });
+                break;
+                
+            // (السلايدر)
+            case 'slider-prev':
+                const prev = (currentSlide - 1 + slides.length) % slides.length;
+                updateSlider(prev);
+                break;
+            case 'slider-next':
+                const next = (currentSlide + 1) % slides.length;
+                updateSlider(next);
+                break;
+            case 'slider-goto':
+                const index = parseInt(target.dataset.index);
+                updateSlider(index);
+                break;
+        }
+    });
+    
+    // (رصد البحث)
+    document.body.addEventListener('input', (e) => {
+        if (e.target.id === 'search-input-desktop' || e.target.id === 'search-input-mobile') {
+            searchQuery = e.target.value;
+            // (تحديث الشريط الآخر إذا كانا موجودين)
+            if (e.target.id === 'search-input-desktop' && document.getElementById('search-input-mobile')) {
+                document.getElementById('search-input-mobile').value = searchQuery;
+            } else if (e.target.id === 'search-input-mobile' && document.getElementById('search-input-desktop')) {
+                document.getElementById('search-input-desktop').value = searchQuery;
+            }
+            renderProductList();
+            showPage('page-list');
+        }
+    });
+    
+    // (رصد إرسال نماذج المصادقة)
+    document.body.addEventListener('submit', (e) => {
+        e.preventDefault(); // (منع الإرسال الافتراضي لكل النماذج)
+        if (e.target.id === 'login-form') {
+            handleLogin(e);
+        } else if (e.target.id === 'register-form') {
+            handleRegister(e);
+        }
+    });
+
+    // --- 8. بدء تشغيل التطبيق (تم الإصلاح) ---
+
+    // (رصد حالة المصادقة (Auth))
+    onAuthStateChanged(auth, (user) => {
+        
+        let oldUserId = userId; // (تخزين المعرف القديم)
+        
+        if (user) {
+            // (المستخدم مسجل دخوله - سواء مجهول أو بإيميل)
+            currentUser = user;
+            userId = user.uid; // <-- (يتم تعيينه هنا)
+            
+            // (فقط إذا كان هذا هو التشغيل الأول)
+            if (!authReady) {
+                authReady = true;
+                mainLoader.classList.add('hidden');
+                appContent.classList.remove('hidden');
+                
+                // (بدء تحميل البيانات الأساسية)
+                renderHeader();
+                renderFooter();
+                showPage('page-list');
+                renderSkeletons(); // (إظهار هياكل التحميل أولاً)
+                fetchSlides();
+                fetchProducts();
+            }
+            
+            // (جلب السلة دائماً عند وجود مستخدم)
+            fetchCart(); 
+            // (تحديث الهيدر)
+            renderHeader();
+            
+        } else {
+            // (المستخدم سجل خروجه، أو زائر جديد)
+            currentUser = null;
+            userId = null; // <-- (إصلاح: إعادة تعيين المعرف)
+            cartItems = []; // <-- (إصلاح: تفريغ السلة المحلية)
+            
+            // (إذا لم يكن التطبيق جاهزاً، فهذا هو الزائر الأول)
+            if (!authReady) {
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Anonymous sign-in failed:", error);
+                    showNotification("فشل الاتصال بالخادم. قد لا تتمكن من حفظ السلة.", 'error');
+                });
+            } else {
+                // (المستخدم قام بتسجيل الخروج للتو)
+                // (تسجيله كمجهول مرة أخرى للحفاظ على عمل الموقع)
+                signInAnonymously(auth).catch((error) => { /* ... */ });
+                // (تحديث الهيدر لإظهار أزرار "دخول")
+                renderHeader();
+            }
+        }
+    });
+
+  </script>
+</body>
+</html>
