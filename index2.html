@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة تحكم ECHRI NOW</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 
+    استخدام خط "Cairo" للموقع
+    https://fonts.google.com/specimen/Cairo
+  -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+    }
+    .hidden {
+      display: none;
+    }
+    .tab-btn {
+        transition: all 0.3s ease;
+    }
+    .tab-btn.active {
+        border-bottom-color: #F97316; /* (برتقالي) */
+        color: #F97316;
+    }
+    .tab-content {
+        animation: fadeIn 0.5s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+
+  <!-- (الإشعارات) -->
+  <div id="notification-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[200] w-full max-w-md">
+    <!-- الإشعارات ستضاف هنا -->
+  </div>
+
+  <!-- 1. شاشة تسجيل الدخول -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gray-200">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md text-center">
+      <img src="https://i.ibb.co/xSwNKr6P/mini.png" alt="ECHRI NOW Logo" class="h-20 mx-auto mb-6">
+      <h2 class="text-3xl font-bold mb-6">تسجيل دخول المدير</h2>
+      <form id="login-form">
+        <div class="mb-4">
+          <input id="login-email" type="email" placeholder="البريد الإلكتروني" class="p-3 border rounded w-full text-right" required />
+        </div>
+        <div class="mb-6">
+          <input id="login-password" type="password" placeholder="كلمة السر" class="p-3 border rounded w-full text-right" required />
+        </div>
+        <button type="submit" class="w-full bg-orange-500 text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition">
+          دخول
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. لوحة التحكم الرئيسية (مخفية افتراضياً) -->
+  <div id="admin-panel" class="hidden min-h-screen">
+    
+    <!-- (الشريط العلوي) -->
+    <header class="bg-white shadow-md sticky top-0 z-50">
+      <div class="container mx-auto p-4 flex justify-between items-center max-w-7xl">
+        <img src="https://i.ibb.co/xSwNKr6P/mini.png" alt="ECHRI NOW Logo" class="h-16">
+        <div class="flex items-center gap-4">
+            <span id="admin-email" class="text-gray-600 hidden md:block"></span>
+            <button id="logout-btn" class="bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition">
+              تسجيل الخروج
+            </button>
+        </div>
+      </div>
+    </header>
+    
+    <!-- (نظام التبويبات) -->
+    <main class="container mx-auto p-4 max-w-7xl">
+        <!-- (أزرار التبويبات) -->
+        <div class="mb-6 border-b border-gray-300">
+            <nav class="flex gap-6 -mb-px">
+                <button data-tab="products" class="tab-btn py-4 px-1 border-b-4 border-transparent text-lg font-semibold text-gray-500 hover:text-orange-500 active">
+                    إدارة المنتجات
+                </button>
+                <button data-tab="orders" class="tab-btn py-4 px-1 border-b-4 border-transparent text-lg font-semibold text-gray-500 hover:text-orange-500">
+                    إدارة الطلبات
+                </button>
+                <button data-tab="slides" class="tab-btn py-4 px-1 border-b-4 border-transparent text-lg font-semibold text-gray-500 hover:text-orange-500">
+                    إدارة اللافتات
+                </button>
+            </nav>
+        </div>
+
+        <!-- (محتوى تبويب المنتجات) -->
+        <div id="tab-products" class="tab-content">
+            <!-- (نموذج إضافة/تعديل المنتج - تم التحديث) -->
+            <form id="product-form" class="bg-white p-6 rounded-lg shadow-md mb-6">
+              <h3 id="form-title" class="text-2xl font-bold mb-4">إضافة منتج جديد</h3>
+              <input type="hidden" id="product-id" />
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="product-name" type="text" placeholder="اسم المنتج" class="p-3 border rounded w-full" required />
+                <input id="product-price" type="number" placeholder="السعر (د.ج)" class="p-3 border rounded w-full" required />
+                <input id="product-category" type="text" placeholder="الفئة (مثال: هواتف)" class="p-3 border rounded w-full" required />
+                <input id="product-stock" type="number" placeholder="الكمية المتوفرة (Stock)" class="p-3 border rounded w-full" required />
+              </div>
+              <textarea id="product-description" placeholder="الوصف" class="p-3 border rounded w-full mt-4" rows="3"></textarea>
+              <!-- (تم تحويل حقل الصورة إلى صندوق نصي) -->
+              <textarea id="product-imageUrls" placeholder="روابط الصور (الصق كل رابط في سطر منفصل. الصورة الأولى هي الرئيسية)" class="p-3 border rounded w-full mt-4" rows="4" required></textarea>
+              
+              <div class="flex gap-4 mt-4">
+                <button type="submit" id="save-product-btn" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition">
+                  حفظ المنتج
+                </button>
+                <button type="button" id="cancel-edit-btn" class="flex-1 bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600 transition hidden">
+                  إلغاء التعديل
+                </button>
+              </div>
+            </form>
+            
+            <!-- (قائمة المنتجات) -->
+            <h3 class="text-2xl font-bold mb-4 mt-8">قائمة المنتجات الحالية</h3>
+            <div id="product-list" class="bg-white rounded-lg shadow-md overflow-hidden">
+              <!-- المنتجات ستضاف هنا -->
+              <div id="products-loader" class="p-10 text-center">
+                  <div class="w-12 h-12 border-4 border-orange-500 border-dashed rounded-full animate-spin mx-auto"></div>
+              </div>
+            </div>
+        </div>
+        
+        <!-- (محتوى تبويب الطلبات) -->
+        <div id="tab-orders" class="tab-content hidden">
+            <h3 class="text-2xl font-bold mb-4">إدارة الطلبات الجديدة</h3>
+            <div id="orders-list" class="space-y-4">
+                <!-- الطلبات ستضاف هنا -->
+                <div id="orders-loader" class="p-10 text-center">
+                  <div class="w-12 h-12 border-4 border-orange-500 border-dashed rounded-full animate-spin mx-auto"></div>
+              </div>
+            </div>
+        </div>
+        
+        <!-- (محتوى تبويب السلايدر) -->
+        <div id="tab-slides" class="tab-content hidden">
+            <!-- (نموذج إضافة/تعديل لافتة) -->
+            <form id="slide-form" class="bg-white p-6 rounded-lg shadow-md mb-6">
+              <h3 id="slide-form-title" class="text-2xl font-bold mb-4">إضافة لافتة جديدة (Slide)</h3>
+              <input type="hidden" id="slide-id" />
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input id="slide-title" type="text" placeholder="العنوان الرئيسي" class="p-3 border rounded w-full" required />
+                <input id="slide-subtitle" type="text" placeholder="العنوان الفرعي (الوصف)" class="p-3 border rounded w-full" />
+                <input id="slide-buttonText" type="text" placeholder="نص الزر (مثال: تسوق الآن)" class="p-3 border rounded w-full" />
+                <input id="slide-link" type="url" placeholder="الرابط (عند ضغط الزر)" class="p-3 border rounded w-full" />
+              </div>
+              <input id="slide-imageUrl" type="url" placeholder="رابط صورة الخلفية (URL)" class="p-3 border rounded w-full mt-4" required />
+              
+              <div class="flex gap-4 mt-4">
+                <button type="submit" id="save-slide-btn" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition">
+                  حفظ اللافتة
+                </button>
+                <button type="button" id="cancel-slide-edit-btn" class="flex-1 bg-gray-500 text-white py-3 rounded-lg font-semibold hover:bg-gray-600 transition hidden">
+                  إلغاء التعديل
+                </button>
+              </div>
+            </form>
+            
+            <!-- (قائمة اللافتات) -->
+            <h3 class="text-2xl font-bold mb-4 mt-8">اللافتات الحالية</h3>
+            <div id="slide-list" class="bg-white rounded-lg shadow-md overflow-hidden">
+                <!-- اللافتات ستضاف هنا -->
+                <div id="slides-loader" class="p-10 text-center">
+                  <div class="w-12 h-12 border-4 border-orange-500 border-dashed rounded-full animate-spin mx-auto"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+  </div>
+
+
+  <!-- (Firebase SDKs) -->
+  <script type="module">
+    // استيراد الدوال الأساسية
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      getDoc, 
+      getDocs, 
+      setDoc, 
+      addDoc,
+      updateDoc, 
+      deleteDoc, 
+      onSnapshot, 
+      collection, 
+      query, 
+      where, 
+      Timestamp
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- 1. الإعدادات والتهيئة ---
+
+    // (تحديد هوية المدير - أهم تحديث أمني)
+    const ADMIN_UID = 'iZdxlYRVO0XGZ2rhh5u1KAfVjiC3'; // (هذا هو حساب المدير الوحيد)
+
+    // إعدادات Firebase الخاصة بك
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJKHjHfZnYCSBNwVKodBDguhiQYToDzkE",
+      authDomain: "ecchrinow.firebaseapp.com",
+      projectId: "ecchrinow",
+      storageBucket: "ecchrinow.firebasestorage.app",
+      messagingSenderId: "684711211815",
+      appId: "1:684711211815:web:0bb9b7bc1a0ae398ec6f02",
+      measurementId: "G-BBQZ91Y2PZ"
+    };
+
+    // تعريف المتغيرات العامة
+    let app, db, auth;
+    
+    // (عقد DOM الرئيسية)
+    const loginScreen = document.getElementById('login-screen');
+    const adminPanel = document.getElementById('admin-panel');
+    const loginForm = document.getElementById('login-form');
+    const logoutBtn = document.getElementById('logout-btn');
+    const adminEmail = document.getElementById('admin-email');
+    const notificationContainer = document.getElementById('notification-container');
+    
+    // (عقد تبويب المنتجات)
+    const productForm = document.getElementById('product-form');
+    const productList = document.getElementById('product-list');
+    const formTitle = document.getElementById('form-title');
+    const productIdField = document.getElementById('product-id');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const productsLoader = document.getElementById('products-loader');
+
+    // (عقد تبويب الطلبات)
+    const ordersList = document.getElementById('orders-list');
+    const ordersLoader = document.getElementById('orders-loader');
+    
+    // (عقد تبويب السلايدر)
+    const slideForm = document.getElementById('slide-form');
+    const slideList = document.getElementById('slide-list');
+    const slideFormTitle = document.getElementById('slide-form-title');
+    const slideIdField = document.getElementById('slide-id');
+    const cancelSlideEditBtn = document.getElementById('cancel-slide-edit-btn');
+    const slidesLoader = document.getElementById('slides-loader');
+    
+    // (مسارات Firestore)
+    const appId = firebaseConfig.appId;
+    const productsCollectionPath = `artifacts/${appId}/public/data/products`;
+    const ordersCollectionPath = `artifacts/${appId}/public/data/all_orders`;
+    const slidesCollectionPath = `artifacts/${appId}/public/data/slides`;
+
+    // تهيئة Firebase
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+    } catch (e) {
+      console.error("Firebase initialization error:", e);
+      showNotification("فشل الاتصال بالخادم الرئيسي.", 'error');
+    }
+    
+    // --- 2. دوال مساعدة (Helpers) ---
+
+    // (دالة الإشعارات)
+    function showNotification(message, type = 'success') {
+      const notif = document.createElement('div');
+      const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+      const icon = type === 'error' 
+        ? `<svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+        : `<svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      
+      notif.className = `flex items-center ${bgColor} text-white py-3 px-6 rounded-lg shadow-lg mb-2 animate-bounce`;
+      notif.innerHTML = `${icon}<span>${message}</span>`;
+      notificationContainer.appendChild(notif);
+      
+      setTimeout(() => {
+        notif.classList.remove('animate-bounce');
+        notif.classList.add('transition-opacity', 'duration-500', 'opacity-0');
+        setTimeout(() => notif.remove(), 500);
+      }, 3000);
+    }
+
+    // (تنسيق العملة)
+    function formatCurrency(price) {
+      return new Intl.NumberFormat('ar-DZ', { style: 'currency', currency: 'DZD', minimumFractionDigits: 0 }).format(price).replace('DZD', 'د.ج');
+    }
+    
+    // (إعادة تعيين نموذج المنتج)
+    function resetProductForm() {
+        productForm.reset();
+        productIdField.value = '';
+        formTitle.innerText = 'إضافة منتج جديد';
+        cancelEditBtn.classList.add('hidden');
+    }
+    
+    // (إعادة تعيين نموذج السلايدر)
+    function resetSlideForm() {
+        slideForm.reset();
+        slideIdField.value = '';
+        slideFormTitle.innerText = 'إضافة لافتة جديدة (Slide)';
+        cancelSlideEditBtn.classList.add('hidden');
+    }
+    
+    // (التبديل بين التبويبات)
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+        
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.remove('active', 'border-orange-500', 'text-orange-500');
+            if (btn.dataset.tab === tabName) {
+                btn.classList.add('active', 'border-orange-500', 'text-orange-500');
+            }
+        });
+    }
+
+    // --- 3. دوال Firebase (Firestore & Auth) ---
+    
+    // (تسجيل الدخول)
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        // (سيقوم onAuthStateChanged بالباقي)
+      } catch (error) {
+        console.error("Login Error:", error);
+        showNotification("فشل تسجيل الدخول. تأكد من الإيميل وكلمة السر.", 'error');
+      }
+    }
+    
+    // (تسجيل الخروج)
+    async function handleLogout() {
+      try {
+        await signOut(auth);
+        // (سيقوم onAuthStateChanged بالباقي)
+      } catch (error) {
+        console.error("Logout Error:", error);
+        showNotification("حدث خطأ أثناء تسجيل الخروج.", 'error');
+      }
+    }
+    
+    // (جلب ورسم المنتجات - تم التحديث)
+    function listenToProducts() {
+        const q = query(collection(db, productsCollectionPath)); // (يمكن إضافة order By)
+        
+        onSnapshot(q, (snapshot) => {
+            productsLoader.classList.add('hidden');
+            if (snapshot.empty) {
+                productList.innerHTML = `<p class="p-6 text-center text-gray-500">لا توجد منتجات حتى الآن. قم بإضافة منتج جديد.</p>`;
+                return;
+            }
+            
+            productList.innerHTML = snapshot.docs.map(doc => {
+                const product = doc.data();
+                // (جلب الصورة الأولى كصورة مصغرة)
+                const mainImage = (product.imageUrls && product.imageUrls.length > 0)
+                    ? product.imageUrls[0]
+                    : 'https://placehold.co/100x100/cccccc/ffffff?text=خطأ';
+                    
+                return `
+                    <div class="flex items-center justify-between p-4 border-b">
+                      <img src="${mainImage}" alt="${product.name}" class="w-16 h-16 object-contain rounded-md border" onerror="this.src='https://placehold.co/100x100/cccccc/ffffff?text=خطأ'">
+                      <div class="flex-1 mx-4 text-right">
+                        <h4 class="text-lg font-semibold">${product.name}</h4>
+                        <p class="text-sm text-gray-600">${formatCurrency(product.price)} - (الفئة: ${product.category}) - (الكمية: ${product.stock})</p>
+                      </div>
+                      <div class="flex gap-2">
+                        <button data-action="edit-product" data-id="${doc.id}" class="bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600 transition">
+                          تعديل
+                        </button>
+                        <button data-action="delete-product" data-id="${doc.id}" class="bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition">
+                          حذف
+                        </button>
+                      </div>
+                    </div>
+                `;
+            }).join('');
+            
+        }, (error) => {
+            console.error("Error listening to products:", error);
+            showNotification("فشل في تحميل قائمة المنتجات.", 'error');
+            productsLoader.classList.add('hidden');
+            productList.innerHTML = `<p class="p-6 text-center text-red-500">حدث خطأ أثناء تحميل المنتجات.</p>`;
+        });
+    }
+    
+    // (حفظ / تعديل منتج - تم التحديث)
+    async function handleSaveProduct(e) {
+      e.preventDefault();
+      const id = productIdField.value;
+      
+      // (تحويل روابط الصور من صندوق النص إلى مصفوفة)
+      const imageUrlsInput = document.getElementById('product-imageUrls').value;
+      const imageUrls = imageUrlsInput.split('\n').map(url => url.trim()).filter(url => url.length > 0);
+      
+      if (imageUrls.length === 0) {
+          showNotification("الرجاء إضافة رابط صورة واحدة على الأقل.", 'error');
+          return;
+      }
+      
+      const productData = {
+        name: document.getElementById('product-name').value,
+        price: Number(document.getElementById('product-price').value),
+        description: document.getElementById('product-description').value,
+        category: document.getElementById('product-category').value.trim() || 'عام',
+        stock: Number(document.getElementById('product-stock').value),
+        imageUrls: imageUrls, // (حفظ المصفوفة)
+      };
+
+      try {
+        if (id) {
+          // (تعديل منتج موجود)
+          const docRef = doc(db, productsCollectionPath, id);
+          await updateDoc(docRef, productData);
+          showNotification("تم تعديل المنتج بنجاح!", 'success');
+        } else {
+          // (إضافة منتج جديد)
+          await addDoc(collection(db, productsCollectionPath), productData);
+          showNotification("تمت إضافة المنتج بنجاح!", 'success');
+        }
+        resetProductForm();
+      } catch (error) {
+        console.error("Error saving product:", error);
+        showNotification("فشل في حفظ المنتج.", 'error');
+      }
+    }
+    
+    // (تجهيز نموذج التعديل - تم التحديث)
+    async function prepareEditProduct(id) {
+        try {
+            const docRef = doc(db, productsCollectionPath, id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const product = docSnap.data();
+                productIdField.value = id;
+                document.getElementById('product-name').value = product.name;
+                document.getElementById('product-price').value = product.price;
+                document.getElementById('product-category').value = product.category || '';
+                document.getElementById('product-stock').value = product.stock;
+                document.getElementById('product-description').value = product.description;
+                
+                // (تحويل مصفوفة الصور إلى نص)
+                const imageUrlsText = (product.imageUrls && product.imageUrls.length > 0)
+                    ? product.imageUrls.join('\n')
+                    : '';
+                document.getElementById('product-imageUrls').value = imageUrlsText;
+                
+                formTitle.innerText = "تعديل المنتج";
+                cancelEditBtn.classList.remove('hidden');
+                window.scrollTo(0, 0); // (الانتقال لأعلى الصفحة للنموذج)
+            }
+        } catch (error) {
+            console.error("Error preparing edit:", error);
+            showNotification("فشل في جلب بيانات المنتج.", 'error');
+        }
+    }
+    
+    // (حذف منتج)
+    async function deleteProduct(id) {
+        // (إزالة نافذة التأكيد لجعل الحذف مباشراً)
+        try {
+            const docRef = doc(db, productsCollectionPath, id);
+            await deleteDoc(docRef);
+            showNotification("تم حذف المنتج بنجاح.", 'success');
+        } catch (error) {
+            console.error("Error deleting product:", error);
+            showNotification("فشل في حذف المنتج.", 'error');
+        }
+    }
+    
+    // (جلب ورسم الطلبات)
+    function listenToOrders() {
+        const q = query(collection(db, ordersCollectionPath)); // (يمكن إضافة order By)
+        
+        onSnapshot(q, (snapshot) => {
+            ordersLoader.classList.add('hidden');
+            if (snapshot.empty) {
+                ordersList.innerHTML = `<p class="p-6 text-center text-gray-500 bg-white rounded-lg shadow-md">لا توجد طلبات حتى الآن.</p>`;
+                return;
+            }
+            
+            ordersList.innerHTML = snapshot.docs.map(doc => {
+                const order = doc.data();
+                const orderDate = order.createdAt.toDate().toLocaleDateString('ar-EG');
+                
+                return `
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                            <div>
+                                <h4 class="text-xl font-bold">طلب #${doc.id.substring(0, 6)}</h4>
+                                <p class="text-sm text-gray-500">التاريخ: ${orderDate} | ${order.userEmail}</p>
+                            </div>
+                            <!-- (تغيير حالة الطلب + زر الحذف) -->
+                            <div class="flex items-center gap-2">
+                                <label for="status-${doc.id}" class="font-semibold">الحالة:</label>
+                                <select data-action="update-order-status" data-id="${doc.id}" data-userid="${order.userId || ''}" id="status-${doc.id}" 
+                                        class="p-2 border rounded-lg bg-gray-50 font-bold ${
+                                            order.status === 'completed' ? 'text-green-600' :
+                                            order.status === 'shipped' ? 'text-blue-600' : 'text-yellow-600'
+                                        }">
+                                    <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>قيد الانتظار</option>
+                                    <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>تم الشحن</option>
+                                    <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>مكتمل</option>
+                                </select>
+                                <!-- (زر الحذف الجديد) -->
+                                <button data-action="delete-order" data-id="${doc.id}" class="bg-red-500 text-white p-2 rounded-lg font-semibold hover:bg-red-600 transition" title="حذف الطلب">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- (معلومات الزبون) -->
+                        <div class="border-t pt-4 mb-4">
+                            <h5 class="font-semibold mb-2">معلومات الزبون:</h5>
+                            <p><strong>الاسم:</strong> ${order.name}</p>
+                            <p><strong>الهاتف:</strong> ${order.phone}</p>
+                            <p><strong>العنوان:</strong> ${order.address}</p>
+                        </div>
+                        
+                        <!-- (المنتجات المطلوبة) -->
+                        <div class="border-t pt-4">
+                            <h5 class="font-semibold mb-2">المنتجات:</h5>
+                            ${order.items.map(item => `
+                                <div class="flex justify-between items-center mb-2 p-2 bg-gray-50 rounded">
+                                    <span class="text-gray-700">${item.name} (x${item.quantity})</span>
+                                    <span class="text-gray-900 font-semibold">${formatCurrency(item.price * item.quantity)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <!-- (الإجمالي) -->
+                        <div class="border-t pt-4 mt-4 text-right">
+                            <p class="text-2xl font-bold text-orange-600">الإجمالي: ${formatCurrency(order.total)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        }, (error) => {
+            console.error("Error listening to orders:", error);
+            showNotification("فشل في تحميل قائمة الطلبات.", 'error');
+            ordersLoader.classList.add('hidden');
+            ordersList.innerHTML = `<p class="p-6 text-center text-red-500 bg-white rounded-lg shadow-md">حدث خطأ أثناء تحميل الطلبات. (تأكد من تحديث قواعد الأمان).</p>`;
+        });
+    }
+    
+    // (تحديث حالة الطلب)
+    async function updateOrderStatus(orderId, newStatus, customerUserId) {
+        try {
+            // 1. تحديث الطلب في السجل العام (للمدير)
+            const adminOrderRef = doc(db, ordersCollectionPath, orderId);
+            await updateDoc(adminOrderRef, { status: newStatus });
+            
+            // 2. تحديث الطلب في سجل المستخدم (إذا كان موجوداً)
+            if (customerUserId && customerUserId !== 'null' && customerUserId !== 'undefined') {
+                const adminOrderSnap = await getDoc(adminOrderRef);
+                if (!adminOrderSnap.exists()) return; // (تم حذفه)
+                
+                const userOrdersQuery = query(
+                    collection(db, `artifacts/${appId}/users/${customerUserId}/orders`),
+                    where("createdAt", "==", adminOrderSnap.data().createdAt) // (مطابقة بالوقت)
+                );
+                const userOrdersSnapshot = await getDocs(userOrdersQuery);
+                
+                if (!userOrdersSnapshot.empty) {
+                    const userOrderDoc = userOrdersSnapshot.docs[0];
+                    await updateDoc(userOrderDoc.ref, { status: newStatus });
+                }
+            }
+            
+            showNotification("تم تحديث حالة الطلب بنجاح!", 'success');
+        } catch (error) {
+            console.error("خطأ في تحديث حالة الطلب:", error);
+            showNotification("فشل تحديث حالة الطلب.", 'error');
+        }
+    }
+    
+    // (حذف طلب) 
+    async function deleteOrder(orderId) {
+        try {
+            // (للحذف من سجل المستخدم، نحتاج أولاً لجلب الطلب)
+            const adminOrderRef = doc(db, ordersCollectionPath, orderId);
+            const adminOrderSnap = await getDoc(adminOrderRef);
+            if (!adminOrderSnap.exists()) {
+                 throw new Error("لم يتم العثور على الطلب.");
+            }
+            const orderData = adminOrderSnap.data();
+
+            // 1. حذف الطلب من سجل المستخدم (إذا كان موجوداً)
+            if (orderData.userId && orderData.userId !== 'null' && orderData.userId !== 'undefined') {
+                const userOrdersQuery = query(
+                    collection(db, `artifacts/${appId}/users/${orderData.userId}/orders`),
+                    where("createdAt", "==", orderData.createdAt) // (مطابقة بالوقت)
+                );
+                const userOrdersSnapshot = await getDocs(userOrdersQuery);
+                
+                if (!userOrdersSnapshot.empty) {
+                    const userOrderDoc = userOrdersSnapshot.docs[0];
+                    await deleteDoc(userOrderDoc.ref);
+                }
+            }
+            
+            // 2. حذف الطلب من السجل العام (للمدير)
+            await deleteDoc(adminOrderRef);
+            
+            showNotification("تم حذف الطلب بنجاح!", 'success');
+        } catch (error) {
+            console.error("خطأ في حذف الطلب:", error);
+            showNotification("فشل حذف الطلب.", 'error');
+        }
+    }
+    
+    // (جلب ورسم السلايدر)
+    function listenToSlides() {
+        const q = query(collection(db, slidesCollectionPath));
+        onSnapshot(q, (snapshot) => {
+            slidesLoader.classList.add('hidden');
+            if (snapshot.empty) {
+                slideList.innerHTML = `<p class="p-6 text-center text-gray-500">لا توجد لافتات حتى الآن. قم بإضافة لافتة جديدة.</p>`;
+                return;
+            }
+            slideList.innerHTML = snapshot.docs.map(doc => {
+                const slide = doc.data();
+                return `
+                    <div class="flex items-center justify-between p-4 border-b">
+                      <img src="${slide.imageUrl}" alt="${slide.title}" class="w-24 h-12 object-cover rounded-md border" onerror="this.src='https://placehold.co/100x50/cccccc/ffffff?text=خطأ'">
+                      <div class="flex-1 mx-4 text-right">
+                        <h4 class="text-lg font-semibold">${slide.title}</h4>
+                        <p class="text-sm text-gray-600">${slide.subtitle}</p>
+                      </div>
+                      <div class="flex gap-2">
+                        <button data-action="edit-slide" data-id="${doc.id}" class="bg-blue-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-blue-600 transition">
+                          تعديل
+                        </button>
+                        <button data-action="delete-slide" data-id="${doc.id}" class="bg-red-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-600 transition">
+                          حذف
+                        </button>
+                      </div>
+                    </div>
+                `;
+            }).join('');
+        }, (error) => {
+            console.error("Error listening to slides:", error);
+            showNotification("فشل في تحميل اللافتات.", 'error');
+            slidesLoader.classList.add('hidden');
+        });
+    }
+    
+    // (حفظ / تعديل لافتة)
+    async function handleSaveSlide(e) {
+      e.preventDefault();
+      const id = slideIdField.value;
+      const slideData = {
+        title: document.getElementById('slide-title').value,
+        subtitle: document.getElementById('slide-subtitle').value,
+        buttonText: document.getElementById('slide-buttonText').value,
+        link: document.getElementById('slide-link').value,
+        imageUrl: document.getElementById('slide-imageUrl').value,
+      };
+
+      try {
+        if (id) {
+          const docRef = doc(db, slidesCollectionPath, id);
+          await updateDoc(docRef, slideData);
+          showNotification("تم تعديل اللافتة بنجاح!", 'success');
+        } else {
+          await addDoc(collection(db, slidesCollectionPath), slideData);
+          showNotification("تمت إضافة اللافتة بنجاح!", 'success');
+        }
+        resetSlideForm();
+      } catch (error) {
+        console.error("Error saving slide:", error);
+        showNotification("فشل في حفظ اللافتة.", 'error');
+      }
+    }
+    
+    // (تجهيز تعديل لافتة)
+    async function prepareEditSlide(id) {
+        try {
+            const docRef = doc(db, slidesCollectionPath, id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const slide = docSnap.data();
+                slideIdField.value = id;
+                document.getElementById('slide-title').value = slide.title;
+                document.getElementById('slide-subtitle').value = slide.subtitle;
+                document.getElementById('slide-buttonText').value = slide.buttonText;
+                document.getElementById('slide-link').value = slide.link;
+                document.getElementById('slide-imageUrl').value = slide.imageUrl;
+                
+                slideFormTitle.innerText = "تعديل اللافتة";
+                cancelSlideEditBtn.classList.remove('hidden');
+                window.scrollTo(0, 0);
+            }
+        } catch (error) {
+            console.error("Error preparing slide edit:", error);
+            showNotification("فشل في جلب بيانات اللافتة.", 'error');
+        }
+    }
+
+    // (حذف لافتة)
+    async function deleteSlide(id) {
+        try {
+            const docRef = doc(db, slidesCollectionPath, id);
+            await deleteDoc(docRef);
+            showNotification("تم حذف اللافتة بنجاح.", 'success');
+        } catch (error) {
+            console.error("Error deleting slide:", error);
+            showNotification("فشل في حذف اللافتة.", 'error');
+        }
+    }
+
+    // --- 4. رصد الأحداث (Event Listeners) ---
+
+    // (رصد حالة المصادقة - تم تحديثه للأمان)
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // (تحقق إذا كان المستخدم هو المدير)
+        if (user.uid === ADMIN_UID) {
+          // (المستخدم هو المدير)
+          loginScreen.classList.add('hidden');
+          adminPanel.classList.remove('hidden');
+          adminEmail.innerText = user.email;
+          
+          // (بدء جلب البيانات بعد تسجيل الدخول)
+          listenToProducts();
+          listenToOrders();
+          listenToSlides();
+        } else {
+          // (المستخدم هو زبون عادي، ليس مديراً)
+          console.warn("محاولة دخول غير مصرح بها:", user.email);
+          showNotification("أنت غير مصرح لك بالدخول إلى لوحة التحكم.", 'error');
+          signOut(auth); // (طرده من الجلسة)
+          // (إبقاؤه في شاشة تسجيل الدخول)
+          loginScreen.classList.remove('hidden');
+          adminPanel.classList.add('hidden');
+          adminEmail.innerText = '';
+        }
+      } else {
+        // (المستخدم سجل خروجه)
+        loginScreen.classList.remove('hidden');
+        adminPanel.classList.add('hidden');
+        adminEmail.innerText = '';
+      }
+    });
+
+    // (تسجيل الدخول والخروج)
+    loginForm.addEventListener('submit', handleLogin);
+    logoutBtn.addEventListener('click', handleLogout);
+
+    // (حفظ المنتجات)
+    productForm.addEventListener('submit', handleSaveProduct);
+    cancelEditBtn.addEventListener('click', resetProductForm);
+    
+    // (حفظ السلايدر)
+    slideForm.addEventListener('submit', handleSaveSlide);
+    cancelSlideEditBtn.addEventListener('click', resetSlideForm);
+
+    // (رصد النقرات العامة في لوحة التحكم)
+    adminPanel.addEventListener('click', (e) => {
+        const target = e.target.closest('button, select');
+        if (!target) return;
+        
+        const action = target.dataset.action;
+        const id = target.dataset.id;
+        
+        switch (action) {
+            // (أزرار المنتجات)
+            case 'edit-product':
+                prepareEditProduct(id);
+                break;
+            case 'delete-product':
+                deleteProduct(id);
+                break;
+            // (أزرار السلايدر)
+            case 'edit-slide':
+                prepareEditSlide(id);
+                break;
+            case 'delete-slide':
+                deleteSlide(id);
+                break;
+            // (أزرار الطلبات - تم التحديث)
+            case 'delete-order':
+                deleteOrder(id);
+                break;
+        }
+        
+        // (التبديل بين التبويبات)
+        if(target.dataset.tab) {
+            switchTab(target.dataset.tab);
+        }
+    });
+    
+    // (رصد تغيير حالة الطلب)
+    adminPanel.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.dataset.action === 'update-order-status') {
+            const orderId = target.dataset.id;
+            const customerUserId = target.dataset.userid;
+            const newStatus = target.value;
+            updateOrderStatus(orderId, newStatus, customerUserId);
+        }
+    });
+    
+    // (عرض التبويب الأول افتراضياً)
+    switchTab('products');
+    
+  </script>
+</body>
+</html>
